@@ -3,11 +3,10 @@ import asyncio
 
 class PressureController:
 
-    def __init__(self, bus, address):
-        self._bus = bus
-        self._address = address
+    def __init__(self):
+        self._pressure = 1
 
-    async def get_pressure(self) -> int:
-        result = 1
+    async def get_pressure(self):
         await asyncio.sleep(1)
-        return result
+        return self._pressure
+

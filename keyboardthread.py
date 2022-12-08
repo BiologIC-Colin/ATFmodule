@@ -8,6 +8,7 @@ class KeyboardThread(threading.Thread):
         self.stopThread = False
         self.input_cbk = input_cbk
         super(KeyboardThread, self).__init__(name=name)
+        self.start()
 
 
     def run(self):

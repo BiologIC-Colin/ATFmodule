@@ -1,12 +1,11 @@
-from atf_old import AtfController
+from atfcontroller import AtfController
 from pressurecontroller import PressureController
 from keyboardthread import KeyboardThread
 import asyncio
 
 
-p1 = PressureController(1, 1)
-p2 = PressureController(1, 2)
-controller = AtfController()
+p1 = PressureController()
+p2 = PressureController()
 isRunning = True
 
 
@@ -29,16 +28,14 @@ async def main():
     while isRunning:
         await check_pressures()
         await asyncio.sleep(1)
-        atfstate = controller.get_State()
-        if atfstate == 'ready':
-            await controller.start()
-        # time.sleep(60)
-        # controller.stop()
 
 
 if __name__ == '__main__':
     ktThread = KeyboardThread(command_received)
-    ktThread.start()
+    atfThread = AtfController()
     asyncio.run(main())
     ktThread.stopThread = True
+    atfThread.stopThread = True
     ktThread.join()
+    atfThread.join()
+
