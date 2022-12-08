@@ -2,7 +2,7 @@ import time
 
 
 class ChemyxController:
-    delay = 0.1
+    delay = 2
 
     def __init__(self):
         pass
