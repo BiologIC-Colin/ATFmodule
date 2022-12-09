@@ -22,6 +22,8 @@ def command_received(inp):
     print("callback")
     if inp == 's':
         atfThread.atf_start()
+    elif inp == 'e':
+        atfThread.atf_stop()
     elif inp == 'q':
         isRunning = False
 
