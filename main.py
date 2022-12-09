@@ -20,7 +20,9 @@ async def check_pressures():
 def command_received(inp):
     global isRunning
     print("callback")
-    if inp == 'q':
+    if inp == 's':
+        atfThread.atf_start()
+    elif inp == 'q':
         isRunning = False
 
 
@@ -36,6 +38,7 @@ if __name__ == '__main__':
     asyncio.run(main())
     ktThread.stopThread = True
     atfThread.stopThread = True
-    ktThread.join()
     atfThread.join()
+    ktThread.join()
+
 
