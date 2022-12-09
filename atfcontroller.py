@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from enum import Enum
-
+from perfusion import Perfusion, PerfusionCommand
 
 class States(Enum):
     READY = 0
@@ -25,6 +25,8 @@ class AtfController(threading.Thread):
         self._stateChanged = False
 
         self._stopRequest = False
+
+        self._perfusion = Perfusion()
 
         self.atf_volume = 3.0  # ml
         self.atf_rate = 1.0  # ml/min
@@ -74,7 +76,8 @@ class AtfController(threading.Thread):
     # State transitions
     async def _prime(self):
         print('In prime transition')
-        await asyncio.sleep(5)  # Do the transition
+        self._perfusion.doCommand(PerfusionCommand.PRIME)
+        # await asyncio.sleep(5)  # Do the transition
         # self.stateChanged = False
         # Prime is complete so we push to run
         self._state = States.RUN_WITHDRAW
