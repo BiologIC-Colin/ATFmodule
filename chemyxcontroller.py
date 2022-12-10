@@ -1,6 +1,10 @@
 import time
 import serial
+import logging
 
+
+
+logger = logging.getLogger('ATF_Log')
 class ChemyxController:
     def __init__(self):
         self.ser = None
@@ -27,13 +31,14 @@ class ChemyxController:
         except Exception as e:
             if self.verbose:
                 print("Failed to connect to pump")
+                logger.error('Failed to connect to pump')
                 print(e)
             pass
 
     def closeConnection(self):
         self.ser.close()
         if self.verbose:
-            print("Closed connection")
+            logger.info('Closed connection to pump')
 
     def sendCommand(self, command):
 
@@ -135,8 +140,6 @@ class ChemyxController:
         if self.multipump and mode > 0:
             command = f'{mode} {command}'
         response = self.sendCommand(command)
-        #if response.find('stop'):
-           # print("Found Stop")
         return response
 
     def pausePump(self, mode=0):
@@ -220,7 +223,7 @@ class ChemyxController:
         return response
 
     def getDisplacedVolume(self):
-        command = 'dispensed volume'
+        command = str(self.currentPump) + ' dispensed volume'
         response = self.sendCommand(command)
         return response
 

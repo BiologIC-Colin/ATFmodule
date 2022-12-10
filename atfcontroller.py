@@ -2,6 +2,9 @@ import asyncio
 import threading
 from enum import Enum
 from perfusion import Perfusion, PerfusionCommand
+import logging
+
+logger = logging.getLogger('ATF_Log')
 
 class States(Enum):
     READY = 0
