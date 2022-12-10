@@ -77,28 +77,25 @@ class AtfController(threading.Thread):
     async def _prime(self):
         print('In prime transition')
         self._perfusion.doCommand(PerfusionCommand.PRIME)
-        # await asyncio.sleep(5)  # Do the transition
-        # self.stateChanged = False
-        # Prime is complete so we push to run
+        await asyncio.sleep(1)
         self._state = States.RUN_WITHDRAW
 
     async def _infuse(self):
         print('In infuse transition')
-        await asyncio.sleep(5)  # Do the transition
-        # self.stateChanged = False
-        # Infuse is complete change to Withdraw.
+        self._perfusion.doCommand(PerfusionCommand.INFUSE)
+        await asyncio.sleep(1)
         self._state = States.RUN_WITHDRAW
 
     async def _withdraw(self):
         print('In withdraw transition')
-        await asyncio.sleep(5)  # Do the transition
-        # self.stateChanged = False
-        # Withdraw is complete change to infuse.
+        self._perfusion.doCommand(PerfusionCommand.WITHDRAW)
+        await asyncio.sleep(1)
         self._state = States.RUN_INFUSE
 
     async def _atf_stop(self):
         print('In stop transition')
-        await asyncio.sleep(5)  # Do the transition
+        self._perfusion.doCommand(PerfusionCommand.EMPTY)
+        await asyncio.sleep(1)  # Do the transition
         self.stateChanged = False
         self._stopRequest = False
         self._state = States.READY

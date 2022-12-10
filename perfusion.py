@@ -1,5 +1,6 @@
 from chemyxcontroller import ChemyxController
 from enum import Enum
+import time
 
 
 
@@ -30,7 +31,7 @@ class Pump:
 
 pump1 = Pump()
 pump2 = Pump()
-perfusionRate = 5.0
+perfusionRate = 3.0
 perfusionPulseVolume = 0.0
 atfFillVolume = 1.0
 
@@ -62,7 +63,7 @@ class Perfusion:
         response = self._pump.getPumpStatus()
         return response
 
-    async def _prime(self):
+    def _prime(self):
         print("Fill ATF")
         self._pump.changePump(1)
         self._pump.setVolume(atfFillVolume)
@@ -73,25 +74,39 @@ class Perfusion:
         self._pump.startPump(mode=1)
         self._await_finish()
 
-    async def _withdraw(self):
+    def _withdraw(self):
         print("Withdraw ATF")
         self._pump.setVolume(atfFillVolume)
         self._pump.setRate(-perfusionRate)
         self._pump.startPump(mode=1)
         self._await_finish()
 
-    async def _await_finish(self):
+    def _infuse(self):
+        print("Infuse ATF")
+        self._pump.setVolume(atfFillVolume)
+        self._pump.setRate(perfusionRate)
+        self._pump.startPump(mode=1)
+        self._await_finish()
+
+    def _empty(self):
+        print("Empty ATF")
+        # Need to think this through - is there an absolute position
+
+    def _await_finish(self):
         while self._getPumpState() != '0':
-            asyncio.sleep(1)
+            time.sleep(1)
 
 
-    async def doCommand(self, command):
+    def doCommand(self, command):
         if self._getPumpState() == '0':
             if command == PerfusionCommand.PRIME:
-                await _prime()
+                self._prime()
             elif command == PerfusionCommand.WITHDRAW:
-                await _withdraw()
-
+               self._withdraw()
+            elif command == PerfusionCommand.INFUSE:
+               self._infuse()
+            elif command == PerfusionCommand.EMPTY:
+                self._empty()
 
 
 
