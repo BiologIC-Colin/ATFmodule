@@ -1,5 +1,4 @@
 import asyncio
-import threading
 from enum import Enum
 from perfusion import Perfusion, PerfusionCommand
 import logging
@@ -15,42 +14,27 @@ class States(Enum):
     ERROR = 5
 
 
-class AtfController(threading.Thread):
+class AtfController():
 
     def __init__(self):
-        super(AtfController, self).__init__()
-        self.start()
         self.isRunning = True
-        self.stopThread = False
-
         self._currentState = States.READY
         self._state = States.READY
         self._stateChanged = False
-
         self._stopRequest = False
-
         self._perfusion = Perfusion()
-
         self.atf_volume = 3.0  # ml
         self.atf_rate = 1.0  # ml/min
         self.cs_rate = 0.2  # ml/min
 
-    def run(self):
-        asyncio.run(self._controller())
 
-    async def _controller(self):
-        while self.isRunning:
-            self._currentState = self._state  # Store the current state
+    async def controllerloop(self):
 
-            # print("In _Controller")
-            if self.stopThread:
-                self.isRunning = False
-                break
             if self._stopRequest:
                 self._state = States.STOPPING
                 self._stateChanged = True
 
-            print("State is {}".format(self._state))
+            # print("State is {}".format(self._state))
 
             if self._state == States.READY:
                 pass

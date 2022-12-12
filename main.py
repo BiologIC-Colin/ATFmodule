@@ -42,18 +42,16 @@ def command_received(inp):
 
 
 async def main():
-    while isRunning:
+    while isRunning: # Main program loop
         await check_pressures()
         await asyncio.sleep(1)
 
 
 if __name__ == '__main__':
     ktThread = KeyboardThread(command_received)
-    atfThread = AtfController()
+    atfcontroller = AtfController()
     asyncio.run(main())
     ktThread.stopThread = True
-    atfThread.stopThread = True
-    atfThread.join()
     ktThread.join()
 
 
