@@ -2,7 +2,8 @@ import asyncio
 from atfcontroller import AtfController
 from pressurecontroller import PressureController
 # from keyboardthread import KeyboardThread
-from pyModbusTCP.server import ModbusServer, DataBank
+from pyModbusTCP.server import ModbusServer
+from atfdatabank import AtfDataBank
 import logging
 
 
@@ -22,24 +23,9 @@ p1 = PressureController()
 p2 = PressureController()
 isRunning = True
 
-server = ModbusServer(host='0.0.0.0')
-data_bank = DataBank()
+server = ModbusServer()
 
-# Coils
-coil_list = [0, 0] # [Start, Stop]
-data_bank.set_coils(1000, coil_list)
-# Discrete Coils
-discrete_coil_list = [0]
-data_bank.set_discrete_inputs(2000, discrete_coil_list)
-# IsRunning
-# Input Registers
-# Pressure 1
-# Pressure 2
-# System State
-# Holding Registers
-# ATF_volume
-# ATF_rate
-# CS_rate
+
 
 
 async def check_pressures():
@@ -60,16 +46,40 @@ def command_received(inp):
     elif inp == 'q':
         isRunning = False
 
+def modbus_coil_change(address, from_value, to_value):
+    print("Modbus change fired: {} {} {}".format(address, from_value, to_value))
 
 async def main():
     while isRunning: # Main program loop
-        # await check_modbus
         await check_pressures()
         await atf_controller.controllerloop()
 
 
+def init_Modbus():
+    databank = AtfDataBank(modbus_coil_change)
+
+    # Coils
+    coil_list = [0, 0]  # [Start, Stop]
+    databank.set_coils(1000, coil_list)
+    # Discrete Coils
+    discrete_coil_list = [0]
+    databank.set_discrete_inputs(2000, discrete_coil_list)
+    # IsRunning
+    # Input Registers
+    # Pressure 1
+    # Pressure 2
+    # System State
+    # Holding Registers
+    # ATF_volume
+    # ATF_rate
+    # CS_rate
+
+    global server
+    server = ModbusServer(host='0.0.0.0', port=1080, data_bank=databank)
 
 if __name__ == '__main__':
+
+    init_Modbus()
     server.start()
     # ktThread = KeyboardThread(command_received)
     atf_controller = AtfController()
