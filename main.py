@@ -34,9 +34,9 @@ def command_received(inp):
     global isRunning
     logger.debug(f'Keyboard Callback: Command received: {inp}')
     if inp == 's':
-        atfThread.atf_start()
+        atf_controller.atf_start()
     elif inp == 'e':
-        atfThread.atf_stop()
+        atf_controller.atf_stop()
     elif inp == 'q':
         isRunning = False
 
@@ -44,12 +44,13 @@ def command_received(inp):
 async def main():
     while isRunning: # Main program loop
         await check_pressures()
-        await asyncio.sleep(1)
+        await atf_controller.controllerloop()
+
 
 
 if __name__ == '__main__':
     ktThread = KeyboardThread(command_received)
-    atfcontroller = AtfController()
+    atf_controller = AtfController()
     asyncio.run(main())
     ktThread.stopThread = True
     ktThread.join()

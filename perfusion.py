@@ -1,7 +1,9 @@
+import time
+
 from chemyxcontroller import ChemyxController
 from enum import Enum
-import time
 import logging
+import asyncio
 
 logger = logging.getLogger('ATF_Log')
 
@@ -32,7 +34,7 @@ class Pump:
         self.rate = rate
         self.delay = 0.0
 
-_atf_pump = Pump(3.0, 1.0)
+_atf_pump = Pump(0.5, 2.0)
 _eflux_pump = Pump(1.0, 0.2)
 
 
@@ -41,7 +43,7 @@ class Perfusion:
     def __init__(self):
         self._pump = ChemyxController()
         self._pump.openConnection()
-
+        time.sleep(1)
         # Configure pump 1
         self._pump.changePump(1)
         self._pump.setUnits(_atf_pump.syringe.units)
@@ -52,60 +54,71 @@ class Perfusion:
 
         # Configure pump 2
         self.setEflux(0.1)
+        self.isBusy = False
 
-    def _getPumpState(self):
+    def getPumpState(self):
         response = self._pump.getPumpStatus()
         return response
 
-    def _prime(self):
+    async def prime(self):
+        self.isBusy = True
         logger.info('Pump prime command executed')
         self._pump.changePump(1)
         self._pump.setRate(-_atf_pump.rate)
         self._pump.startPump(mode=1)
-        self._await_finish()
+        await self.await_finish()
         self._pump.setRate(_atf_pump.rate)
         self._pump.startPump(mode=1)
-        self._await_finish()
+        await self.await_finish()
+        self.isBusy = False
 
-    def _withdraw(self):
+
+    async def withdraw(self):
+        self.isBusy = True
         logger.info('Pump withdraw command executed')
         # Set pump 1
         self._pump.changePump(1)
         self._pump.setRate(-_atf_pump.rate)
         # Set pump 2
         self._pump.startPump(mode=0)
-        self._await_finish()
+        await self.await_finish()
         self._pump.changePump(1)
         logger.info(f'Cycle has withdrawn product: {self._pump.getDisplacedVolume()}')
+        self.isBusy = False
 
-    def _infuse(self):
+    async def infuse(self):
+        self.isBusy = True
         logger.info('Pump infuse command executed')
         self._pump.setRate(_atf_pump.rate)
         self._pump.startPump(mode=1)
-        self._await_finish()
+        await self.await_finish()
+        self.isBusy = False
 
-    def _empty(self):
+    async def empty(self):
+        self.isBusy = True
         logger.info('Pump empty command executed')
         self._pump.stopPump()
         self._pump.changePump(1)
         logger.info(self._pump.getDisplacedVolume())
         # Need to think this through - is there an absolute position
+        self.isBusy = False
 
-    def _await_finish(self):
-        while self._getPumpState() != '0':
-            time.sleep(1)
+    async def await_finish(self) -> object:
+        while self.getPumpState() != '0':
+            await asyncio.sleep(1)  # Ensures both pumps remain sychronised
 
 
-    def doCommand(self, command):
-        if self._getPumpState() == '0':
+    async def doCommand(self, command):
+        if not self.isBusy:
             if command == PerfusionCommand.PRIME:
-                self._prime()
+                await self.prime()
             elif command == PerfusionCommand.WITHDRAW:
-               self._withdraw()
+               await self.withdraw()
             elif command == PerfusionCommand.INFUSE:
-               self._infuse()
+               await self.infuse()
             elif command == PerfusionCommand.EMPTY:
-                self._empty()
+                await self.empty()
+        return 0
 
     def setEflux(self, csrate):
         _csrate = csrate
