@@ -40,7 +40,7 @@ class AtfController():
             event_loop = asyncio.get_event_loop()
             if self._stateChanged:
                 if self._state == States.READY:
-                    pass
+                    self._stateChanged = False
                 elif self._state == States.PRIMING:
                     prime_task = asyncio.create_task(self._prime())
                     asyncio.ensure_future(prime_task, loop=event_loop)
@@ -105,3 +105,6 @@ class AtfController():
 
     def atf_state(self):
         return self._state
+
+    def set_atf_rate(self, rate):
+        self._perfusion.setAtfRate(rate)

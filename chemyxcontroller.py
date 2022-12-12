@@ -50,7 +50,7 @@ class ChemyxController:
             arg = bytes(str(command), 'utf8') + b'\r'
             #print(arg)
             self.ser.write(arg)  # writes the command
-            time.sleep(0.1)
+            time.sleep(0.2)
             response = self.getResponse()
             return response
         except TypeError as e:

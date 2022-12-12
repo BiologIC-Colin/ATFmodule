@@ -6,8 +6,8 @@ logger = logging.getLogger('ATF_Log')
 
 class AtfDataBank(DataBank):
 
-    def __init__(self, cback, *args, **kwargs):
-        self.callback = cback
+    def __init__(self, callback, *args, **kwargs):
+        self.callback = callback
         super(AtfDataBank, self).__init__(*args, **kwargs)
 
 
