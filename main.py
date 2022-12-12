@@ -1,7 +1,8 @@
+import asyncio
 from atfcontroller import AtfController
 from pressurecontroller import PressureController
-from keyboardthread import KeyboardThread
-import asyncio
+# from keyboardthread import KeyboardThread
+from pyModbusTCP.server import ModbusServer, DataBank
 import logging
 
 
@@ -20,6 +21,25 @@ logger.setLevel(logging.DEBUG)
 p1 = PressureController()
 p2 = PressureController()
 isRunning = True
+
+server = ModbusServer(host='0.0.0.0')
+data_bank = DataBank()
+
+# Coils
+coil_list = [0, 0] # [Start, Stop]
+data_bank.set_coils(1000, coil_list)
+# Discrete Coils
+discrete_coil_list = [0]
+data_bank.set_discrete_inputs(2000, discrete_coil_list)
+# IsRunning
+# Input Registers
+# Pressure 1
+# Pressure 2
+# System State
+# Holding Registers
+# ATF_volume
+# ATF_rate
+# CS_rate
 
 
 async def check_pressures():
@@ -43,16 +63,18 @@ def command_received(inp):
 
 async def main():
     while isRunning: # Main program loop
+        # await check_modbus
         await check_pressures()
         await atf_controller.controllerloop()
 
 
 
 if __name__ == '__main__':
-    ktThread = KeyboardThread(command_received)
+    server.start()
+    # ktThread = KeyboardThread(command_received)
     atf_controller = AtfController()
     asyncio.run(main())
-    ktThread.stopThread = True
-    ktThread.join()
+    # ktThread.stopThread = True
+   # ktThread.join()
 
 
