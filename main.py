@@ -34,18 +34,7 @@ async def check_pressures():
     # print(get_p1.result())
     # print(get_p2.result())
 
-
-def command_received(inp):
-    global isRunning
-    logger.debug(f'Keyboard Callback: Command received: {inp}')
-    if inp == 's':
-        atf_controller.atf_start()
-    elif inp == 'e':
-        atf_controller.atf_stop()
-    elif inp == 'q':
-        isRunning = False
-
-def modbus_coil_change(address, from_value, to_value):
+def modbus_change(address, from_value, to_value):
     print("Modbus change fired: {} {} {}".format(address, from_value, to_value))
     if address == 1000:
         if to_value:
@@ -57,6 +46,15 @@ def modbus_coil_change(address, from_value, to_value):
             print("Stopping...")
             databank.set_coils(1001, [0])
             atf_controller.atf_stop()
+    elif address == 5000:
+        print("Setting atf Volume")
+        atf_controller.set_atf_volume(to_value)
+    elif address == 5100:
+        print("Setting atf rate")
+        atf_controller.set_atf_volume(to_value)
+    elif address == 5200:
+        print("Setting cs rate")
+        atf_controller.set_atf_volume(to_value)
 
 
 
@@ -69,8 +67,8 @@ async def main():
 
 def init_Modbus():
     global databank
-    databank.callback = modbus_coil_change
-    databank = AtfDataBank(modbus_coil_change)
+    databank.callback = modbus_change
+    databank = AtfDataBank(modbus_change)
     # Coils
     coil_list = [0, 0]  # [Start, Stop]
     databank.set_coils(1000, coil_list)

@@ -26,3 +26,5 @@ class AtfDataBank(DataBank):
         msg = 'change in hreg space [{0!r:^5} > {1!r:^5}] at @ 0x{2:04X} from ip: {3:<15}'
         msg = msg.format(from_value, to_value, address, srv_info.client.address)
         logger.info(msg)
+        if self.callback:
+            self.callback(address,from_value,to_value)

@@ -136,6 +136,13 @@ class Perfusion:
 
     def setAtfRate(self,atfrate):
         _atf_pump.rate = atfrate
+        self._configChange()
+
+    def setAtfVolume(self,atfvolume):
+        _atf_pump.volume = atfvolume
+        self._configChange()
+
+    def _configChange(self):
         self._pump.changePump(1)
         self._pump.setUnits(_atf_pump.syringe.units)
         self._pump.setDiameter(_atf_pump.syringe.diameter)
