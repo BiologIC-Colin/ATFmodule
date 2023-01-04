@@ -27,12 +27,15 @@ isRunning = True
 databank = AtfDataBank(0)
 server = ModbusServer()
 
+
+perfusion_atf_volume = 3.0  # ml
+perfusion_atf_rate = 1.0  # ml/min
+perfusion_cs_rate = 0.05  # ml/min
+
 async def check_pressures():
     get_p1 = asyncio.create_task(p1.get_pressure())
     get_p2 = asyncio.create_task(p2.get_pressure())
     await asyncio.gather(get_p1, get_p2)
-    # print(get_p1.result())
-    # print(get_p2.result())
 
 def modbus_change(address, from_value, to_value):
     print("Modbus change fired: {} {} {}".format(address, from_value, to_value))
@@ -46,21 +49,13 @@ def modbus_change(address, from_value, to_value):
             print("Stopping...")
             databank.set_coils(1001, [0])
             atf_controller.atf_stop()
-    elif address == 5000:
-        print("Setting atf Volume")
-        atf_controller.set_atf_volume(to_value)
-    elif address == 5100:
-        print("Setting atf rate")
-        atf_controller.set_atf_volume(to_value)
-    elif address == 5200:
-        print("Setting cs rate")
-        atf_controller.set_atf_volume(to_value)
-
 
 
 async def main():
     while isRunning: # Main program loop
         databank.set_discrete_inputs(2000,[1])
+        print("Main_Loop")
+        await poll_Modbus()
         await check_pressures()
         await atf_controller.controllerloop()
 
@@ -75,11 +70,6 @@ def init_Modbus():
     # Discrete Coils
     discrete_coil_list = [0] # [Is Running]
     databank.set_discrete_inputs(2000, discrete_coil_list)
-    # IsRunning
-    # Input Registers
-    # Pressure 1
-    # Pressure 2
-    # System State
     # Holding Registers
     atf_volume_holding_register = list(bytearray(struct.pack("f",atf_controller.atf_volume)))
     databank.set_holding_registers(5000,atf_volume_holding_register)
@@ -92,8 +82,20 @@ def init_Modbus():
     global server
     server = ModbusServer(host='0.0.0.0', port=1080, data_bank=databank, no_block=True)
 
+async def poll_Modbus():
+    global perfusion_atf_volume
+    perfusion_atf_volume = struct.unpack("f", bytearray(databank.get_holding_registers(5000, 4)))[0]
+    atf_controller.set_atf_volume(perfusion_atf_volume)
+    global perfusion_atf_rate
+    perfusion_atf_rate = struct.unpack("f", bytearray(databank.get_holding_registers(5100, 4)))[0]
+    atf_controller.set_atf_rate(perfusion_atf_rate)
+    global perfusion_cs_rate
+    perfusion_cs_rate = struct.unpack("f", bytearray(databank.get_holding_registers(5200, 4)))[0]
+    atf_controller.set_cs_rate(perfusion_cs_rate)
+
+
 if __name__ == '__main__':
-    atf_controller = AtfController()
+    atf_controller = AtfController(perfusion_atf_volume, perfusion_atf_rate, perfusion_cs_rate)  # These are the system defaults
     init_Modbus()
     server.start()
     asyncio.run(main())

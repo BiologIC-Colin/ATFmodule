@@ -34,27 +34,43 @@ class Pump:
         self.rate = rate
         self.delay = 0.0
 
-_atf_pump = Pump(0.5, 2.0)
-_eflux_pump = Pump(1.0, 0.2)
+atf_pump = Pump(3.0, 1.0)
+eflux_pump = Pump(1.0, 0.2)
 
 
 class Perfusion:
 
-    def __init__(self):
+    def __init__(self, atfVol, atfRate, csRate):
+        atf_pump.volume = atfVol
+        atf_pump.rate = atfRate
+        eflux_pump.rate = csRate
+
         self._pump = ChemyxController()
         self._pump.openConnection()
         time.sleep(1)
-        # Configure pump 1
-        self._pump.changePump(1)
-        self._pump.setUnits(_atf_pump.syringe.units)
-        self._pump.setDiameter(_atf_pump.syringe.diameter)
-        self._pump.setVolume(_atf_pump.volume)
-        self._pump.setRate(_atf_pump.rate)
-        self._pump.setDelay(_atf_pump.delay)
-
-        # Configure pump 2
-        self.setEflux(0.1)
+        self.configurePumps()
         self.isBusy = False
+        self.settingsChanged = True
+
+    def configurePumps(self):
+        self._pump.changePump(1)
+        self._pump.setUnits(atf_pump.syringe.units)
+        self._pump.setDiameter(atf_pump.syringe.diameter)
+        self._pump.setVolume(atf_pump.volume)
+        self._pump.setRate(atf_pump.rate)
+        self._pump.setDelay(atf_pump.delay)
+        _timerequired = atf_pump.volume / atf_pump.rate
+        _volumerequired = eflux_pump.rate * _timerequired
+        eflux_pump.volume = _volumerequired
+        logger.info(f'CS Volume required is {_volumerequired}')
+        self._pump.changePump(2)
+        self._pump.setUnits(eflux_pump.syringe.units)
+        self._pump.setDiameter(eflux_pump.syringe.diameter)
+        self._pump.setVolume(eflux_pump.volume)
+        self._pump.setRate(-eflux_pump.rate)  # Negative because it always withdraws
+        self._pump.setDelay(eflux_pump.delay)
+        self.settingsChanged = False
+
 
     def getPumpState(self):
         response = self._pump.getPumpStatus()
@@ -62,12 +78,14 @@ class Perfusion:
 
     async def prime(self):
         self.isBusy = True
+        if self.settingsChanged:
+            self.configurePumps()
         logger.info('Pump prime command executed')
         self._pump.changePump(1)
-        self._pump.setRate(-_atf_pump.rate)
+        self._pump.setRate(-atf_pump.rate)
         self._pump.startPump(mode=1)
         await self.await_finish()
-        self._pump.setRate(_atf_pump.rate)
+        self._pump.setRate(atf_pump.rate)
         self._pump.startPump(mode=1)
         await self.await_finish()
         self.isBusy = False
@@ -75,10 +93,12 @@ class Perfusion:
 
     async def withdraw(self):
         self.isBusy = True
+        if self.settingsChanged:
+            self.configurePumps()
         logger.info('Pump withdraw command executed')
         # Set pump 1
         self._pump.changePump(1)
-        self._pump.setRate(-_atf_pump.rate)
+        self._pump.setRate(-atf_pump.rate)
         # Set pump 2
         self._pump.startPump(mode=0)
         await self.await_finish()
@@ -88,14 +108,18 @@ class Perfusion:
 
     async def infuse(self):
         self.isBusy = True
+        if self.settingsChanged:
+            self.configurePumps()
         logger.info('Pump infuse command executed')
-        self._pump.setRate(_atf_pump.rate)
+        self._pump.setRate(atf_pump.rate)
         self._pump.startPump(mode=1)
         await self.await_finish()
         self.isBusy = False
 
     async def empty(self):
         self.isBusy = True
+        if self.settingsChanged:
+            self.configurePumps()
         logger.info('Pump empty command executed')
         self._pump.stopPump()
         self._pump.changePump(1)
@@ -120,33 +144,27 @@ class Perfusion:
                 await self.empty()
         return 0
 
-    def setEflux(self, csrate):
-        _csrate = csrate
-        _timerequired = _atf_pump.volume / _atf_pump.rate
-        _volumerequired = _csrate * _timerequired
-        _eflux_pump.rate = _csrate
-        _eflux_pump.volume = _volumerequired
+    async def setATF(self, atf_volume, atf_rate, cs_rate):
+        atf_pump.rate = atf_rate
+        atf_pump.volume = atf_volume
+        eflux_pump.rate = cs_rate
+        _timerequired = atf_pump.volume / atf_pump.rate
+        _volumerequired = cs_rate * _timerequired
+        eflux_pump.volume = _volumerequired
         logger.info(f'CS Volume required is {_volumerequired}')
-        self._pump.changePump(2)
-        self._pump.setUnits(_eflux_pump.syringe.units)
-        self._pump.setDiameter(_eflux_pump.syringe.diameter)
-        self._pump.setVolume(_eflux_pump.volume)
-        self._pump.setRate(-_eflux_pump.rate)  # Negative because it always withdraws
-        self._pump.setDelay(_eflux_pump.delay)
+
+
+    def setEflux(self, csrate):
+        if not csrate == eflux_pump.rate:
+            eflux_pump.rate = csrate
+            self.settingsChanged = True
 
     def setAtfRate(self,atfrate):
-        _atf_pump.rate = atfrate
-        self._configChange()
+        if not atfrate == atf_pump.rate:
+            atf_pump.rate = atfrate
+            self.settingsChanged = True
 
-    def setAtfVolume(self,atfvolume):
-        _atf_pump.volume = atfvolume
-        self._configChange()
-
-    def _configChange(self):
-        self._pump.changePump(1)
-        self._pump.setUnits(_atf_pump.syringe.units)
-        self._pump.setDiameter(_atf_pump.syringe.diameter)
-        self._pump.setVolume(_atf_pump.volume)
-        self._pump.setRate(_atf_pump.rate)
-        self._pump.setDelay(_atf_pump.delay)
-        self.setEflux(_eflux_pump.rate)  # Recalculate the cell specific rate
+    def setAtfVolume(self, atfvolume):
+        if not atfvolume == atf_pump.volume:
+            atf_pump.volume = atfvolume
+            self.settingsChanged = True

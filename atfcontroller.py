@@ -1,7 +1,9 @@
 import asyncio
 from enum import Enum
 from perfusion import Perfusion, PerfusionCommand
+from atfdatabank import AtfDataBank
 import logging
+
 
 logger = logging.getLogger('ATF_Log')
 
@@ -15,18 +17,18 @@ class States(Enum):
     ERROR = 5
 
 
-class AtfController():
+class AtfController:
 
-    def __init__(self):
+    def __init__(self, atf_volume, atf_rate, cs_rate):
         self.isRunning = True
         self._currentState = States.READY
         self._state = States.READY
         self._stateChanged = False
         self._stopRequest = False
-        self._perfusion = Perfusion()
-        self.atf_volume = 0.5  # ml
-        self.atf_rate = 2.0  # ml/min
-        self.cs_rate = 0.2  # ml/min
+        self.atf_volume = atf_volume
+        self.atf_rate = atf_rate  # ml/min
+        self.cs_rate = cs_rate  # ml/min
+        self._perfusion = Perfusion(self.atf_volume, self.atf_rate, self.cs_rate)
 
 
     async def controllerloop(self):
