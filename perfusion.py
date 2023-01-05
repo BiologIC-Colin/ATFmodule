@@ -8,8 +8,6 @@ import asyncio
 logger = logging.getLogger('ATF_Log')
 
 
-
-
 class PerfusionCommand(Enum):
     PRIME = 0
     INFUSE = 1
@@ -36,14 +34,18 @@ class Pump:
 
 atf_pump = Pump(3.0, 1.0)
 eflux_pump = Pump(1.0, 0.2)
+REACTION_VOLUME = 10  # ml
 
 
 class Perfusion:
 
-    def __init__(self, atfVol, atfRate, csRate):
+    def __init__(self, atfVol, atfRate, csRate, csDensity):
         atf_pump.volume = atfVol
         atf_pump.rate = atfRate
-        eflux_pump.rate = csRate
+        self.csRate = csRate
+        self.csDensity = csDensity
+
+        eflux_pump.rate = self._calculateCS(csRate, csDensity)
 
         self._pump = ChemyxController()
         self._pump.openConnection()
@@ -59,10 +61,10 @@ class Perfusion:
         self._pump.setVolume(atf_pump.volume)
         self._pump.setRate(atf_pump.rate)
         self._pump.setDelay(atf_pump.delay)
-        _timerequired = atf_pump.volume / atf_pump.rate
-        _volumerequired = eflux_pump.rate * _timerequired
-        eflux_pump.volume = _volumerequired
-        logger.info(f'CS Volume required is {_volumerequired}')
+        _time_required = atf_pump.volume / atf_pump.rate
+        _cs_volume_required = eflux_pump.rate * _time_required
+        eflux_pump.volume = _cs_volume_required
+        logger.info(f'CS Volume required is {_cs_volume_required}')
         self._pump.changePump(2)
         self._pump.setUnits(eflux_pump.syringe.units)
         self._pump.setDiameter(eflux_pump.syringe.diameter)
@@ -144,20 +146,28 @@ class Perfusion:
                 await self.empty()
         return 0
 
-    async def setATF(self, atf_volume, atf_rate, cs_rate):
+    async def setATF(self, atf_volume, atf_rate, cs_rate, cs_density):
         atf_pump.rate = atf_rate
         atf_pump.volume = atf_volume
-        eflux_pump.rate = cs_rate
+        eflux_pump.rate = self._calculateCS(cs_rate, cs_density)
         _timerequired = atf_pump.volume / atf_pump.rate
-        _volumerequired = cs_rate * _timerequired
+        _volumerequired = eflux_pump.rate * _timerequired
         eflux_pump.volume = _volumerequired
         logger.info(f'CS Volume required is {_volumerequired}')
 
 
-    def setEflux(self, csrate):
-        if not csrate == eflux_pump.rate:
-            eflux_pump.rate = csrate
+    def setEfluxRate(self, csrate):
+        if not csrate == self.csRate:
+            self.csRate = csrate
+            eflux_pump.rate = self._calculateCS(self.csRate, self.csDensity)
             self.settingsChanged = True
+
+    def setEfluxDensity(self, csdensity):
+        if not csdensity == self.csDensity:
+            self.csDensity = csdensity
+            eflux_pump.rate = self._calculateCS(self.csRate, self.csDensity)
+            self.settingsChanged = True
+
 
     def setAtfRate(self,atfrate):
         if not atfrate == atf_pump.rate:
@@ -168,3 +178,13 @@ class Perfusion:
         if not atfvolume == atf_pump.volume:
             atf_pump.volume = atfvolume
             self.settingsChanged = True
+
+    def _calculateCS(self, rate, density):
+        # Multiply the cell specific rate by the number of cells
+        # rate in nl/cell/day
+        # density in cells/ml - volume fixed at 10
+        total_cells = density * REACTION_VOLUME
+        rate_ml_min = ((total_cells * rate) * 86400) * 100000
+
+        cs = rate*density
+        return cs

@@ -30,7 +30,8 @@ server = ModbusServer()
 
 perfusion_atf_volume = 3.0  # ml
 perfusion_atf_rate = 1.0  # ml/min
-perfusion_cs_rate = 0.05  # ml/min
+perfusion_cs_rate = 0.05  # nl/cell/day
+perfusion_cs_density = 1000000  # cells/ml
 
 async def check_pressures():
     get_p1 = asyncio.create_task(p1.get_pressure())
@@ -77,7 +78,8 @@ def init_Modbus():
     databank.set_holding_registers(5100,atf_rate_holding_register)
     cs_rate_holding_register = list(bytearray(struct.pack("f",atf_controller.cs_rate)))
     databank.set_holding_registers(5200,cs_rate_holding_register)
-
+    cs_density_holding_register = list(bytearray(struct.pack("f",atf_controller.cs_density)))
+    databank.set_holding_registers(5300,cs_density_holding_register)
 
     global server
     server = ModbusServer(host='0.0.0.0', port=1080, data_bank=databank, no_block=True)
@@ -92,10 +94,12 @@ async def poll_Modbus():
     global perfusion_cs_rate
     perfusion_cs_rate = struct.unpack("f", bytearray(databank.get_holding_registers(5200, 4)))[0]
     atf_controller.set_cs_rate(perfusion_cs_rate)
+    global perfusion_cs_density
+    perfusion_cs_density = struct.unpack("f", bytearray(databank.get_holding_registers(5300, 4)))[0]
 
 
 if __name__ == '__main__':
-    atf_controller = AtfController(perfusion_atf_volume, perfusion_atf_rate, perfusion_cs_rate)  # These are the system defaults
+    atf_controller = AtfController(perfusion_atf_volume, perfusion_atf_rate, perfusion_cs_rate, perfusion_cs_density)  # These are the system defaults
     init_Modbus()
     server.start()
     asyncio.run(main())

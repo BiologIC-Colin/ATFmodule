@@ -19,7 +19,7 @@ class States(Enum):
 
 class AtfController:
 
-    def __init__(self, atf_volume, atf_rate, cs_rate):
+    def __init__(self, atf_volume, atf_rate, cs_rate, cs_density):
         self.isRunning = True
         self._currentState = States.READY
         self._state = States.READY
@@ -27,8 +27,9 @@ class AtfController:
         self._stopRequest = False
         self.atf_volume = atf_volume
         self.atf_rate = atf_rate  # ml/min
-        self.cs_rate = cs_rate  # ml/min
-        self._perfusion = Perfusion(self.atf_volume, self.atf_rate, self.cs_rate)
+        self.cs_rate = cs_rate  # nl/cell/day
+        self.cs_density = cs_density # cells/ml
+        self._perfusion = Perfusion(self.atf_volume, self.atf_rate, self.cs_rate, self.cs_density)
 
 
     async def controllerloop(self):
