@@ -96,7 +96,7 @@ async def poll_Modbus():
     atf_controller.set_cs_rate(perfusion_cs_rate)
     global perfusion_cs_density
     perfusion_cs_density = struct.unpack("f", bytearray(databank.get_holding_registers(5300, 4)))[0]
-
+    atf_controller.set_cs_density(perfusion_cs_density)
 
 if __name__ == '__main__':
     atf_controller = AtfController(perfusion_atf_volume, perfusion_atf_rate, perfusion_cs_rate, perfusion_cs_density)  # These are the system defaults

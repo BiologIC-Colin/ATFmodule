@@ -116,4 +116,7 @@ class AtfController:
         self._perfusion.setAtfVolume(volume)
 
     def set_cs_rate(self, rate):
-        self._perfusion.setEflux(rate)
+        self._perfusion.setEfluxRate(rate)
+
+    def set_cs_density(self, density):
+        self._perfusion.setEfluxDensity(density)

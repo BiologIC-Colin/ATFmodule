@@ -26,14 +26,17 @@ class Syringe:
 
 class Pump:
 
-    def __init__(self, volume, rate):
-        self.syringe = Syringe('BD 20ml Plastic', 20.00, 'mL/min', 19.13)  # Load the default syringe
+    def __init__(self, volume, rate, syringe):
+        self.syringe = syringe
         self.volume = volume
         self.rate = rate
         self.delay = 0.0
 
-atf_pump = Pump(3.0, 1.0)
-eflux_pump = Pump(1.0, 0.2)
+atf_syringe = Syringe('BD 20ml Plastic', 20.00, 'mL/min', 19.13)  # Load the default syringe
+atf_pump = Pump(3.0, 1.0, atf_syringe)
+eflux_syringe = Syringe('BD 1ml Plastic', 1.00, 'uL/min', 4.78)
+eflux_pump = Pump(1.0, 0.2, eflux_syringe)
+eflux_pump.syringe.units = 'uL/min'  # set units to ul/min
 REACTION_VOLUME = 10  # ml
 
 
@@ -132,7 +135,7 @@ class Perfusion:
     async def await_finish(self) -> object:
         while self.getPumpState() != '0':
             await asyncio.sleep(1)  # Ensures both pumps remain sychronised
-
+        self._pump.stopPump()
 
     async def doCommand(self, command):
         if not self.isBusy:
@@ -152,8 +155,8 @@ class Perfusion:
         eflux_pump.rate = self._calculateCS(cs_rate, cs_density)
         _timerequired = atf_pump.volume / atf_pump.rate
         _volumerequired = eflux_pump.rate * _timerequired
-        eflux_pump.volume = _volumerequired
-        logger.info(f'CS Volume required is {_volumerequired}')
+        eflux_pump.volume = round(_volumerequired, 3)
+        logger.info(f'CS Volume required is {eflux_pump.volume}')
 
 
     def setEfluxRate(self, csrate):
@@ -184,7 +187,5 @@ class Perfusion:
         # rate in nl/cell/day
         # density in cells/ml - volume fixed at 10
         total_cells = density * REACTION_VOLUME
-        rate_ml_min = ((total_cells * rate) * 86400) * 100000
-
-        cs = rate*density
-        return cs
+        rate_ul_min = ((total_cells * rate) / 1440) / 1000  # 1440 minutes in a day
+        return round(rate_ul_min, 3)
