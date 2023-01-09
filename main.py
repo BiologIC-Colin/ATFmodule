@@ -35,8 +35,8 @@ perfusion_cs_density = 1000000  # cells/ml
 
 async def check_pressures():
     get_p1 = asyncio.create_task(p1.get_pressure())
-    get_p2 = asyncio.create_task(p2.get_pressure())
-    await asyncio.gather(get_p1, get_p2)
+    #get_p2 = asyncio.create_task(p2.get_pressure())
+    await asyncio.gather(get_p1)
 
 def modbus_change(address, from_value, to_value):
     print("Modbus change fired: {} {} {}".format(address, from_value, to_value))
@@ -85,7 +85,6 @@ def init_Modbus():
     server = ModbusServer(host='0.0.0.0', port=1080, data_bank=databank, no_block=True)
 
 async def poll_Modbus():
-    global perfusion_atf_volume
     perfusion_atf_volume = struct.unpack("f", bytearray(databank.get_holding_registers(5000, 4)))[0]
     atf_controller.set_atf_volume(perfusion_atf_volume)
     global perfusion_atf_rate

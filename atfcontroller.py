@@ -59,7 +59,7 @@ class AtfController:
                     self._state = States.READY
                 elif self._state == States.ERROR:
                     pass
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.2)
 
     # State transitions
     async def _prime(self):
