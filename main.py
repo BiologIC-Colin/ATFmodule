@@ -20,8 +20,8 @@ logging.getLogger('').addHandler(console)
 # Setting the threshold of logger to DEBUG
 logger.setLevel(logging.DEBUG)
 
-p1 = PressureController()
-p2 = PressureController()
+p1 = PressureController("/dev/spidev0.0")
+p2 = PressureController("/dev/spidev0.1")
 isRunning = True
 
 databank = AtfDataBank(0)
@@ -34,9 +34,11 @@ perfusion_cs_rate = 0.05  # nl/cell/day
 perfusion_cs_density = 1000000  # cells/ml
 
 async def check_pressures():
-    get_p1 = asyncio.create_task(p1.get_pressure())
-    #get_p2 = asyncio.create_task(p2.get_pressure())
-    await asyncio.gather(get_p1)
+    get_p1 = await p1.get_pressure()
+    await asyncio.sleep(0.5)
+    # get_p1 = asyncio.create_task(p1.get_pressure())
+    # get_p2 = asyncio.create_task(p2.get_pressure())
+    # await asyncio.gather(get_p1, get_p2)
 
 def modbus_change(address, from_value, to_value):
     print("Modbus change fired: {} {} {}".format(address, from_value, to_value))
