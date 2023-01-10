@@ -24,13 +24,12 @@ class ChemyxController:
             self.ser.open()
             if self.ser.isOpen():
                 if self.verbose:
-                    print("Opened port")
-                    print(self.ser)
+                    logger.info("Opened port to syringe pump")
+                    logger.info(self.ser)
                     self.ser.flushInput()
                     self.ser.flushOutput()
         except Exception as e:
             if self.verbose:
-                print("Failed to connect to pump")
                 logger.error('Failed to connect to pump')
                 print(e)
             pass

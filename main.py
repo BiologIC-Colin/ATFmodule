@@ -41,15 +41,14 @@ async def check_pressures():
     # await asyncio.gather(get_p1, get_p2)
 
 def modbus_change(address, from_value, to_value):
-    print("Modbus change fired: {} {} {}".format(address, from_value, to_value))
     if address == 1000:
         if to_value:
-            print("Starting...")
+            logger.debug("Modbus start command fired")
             databank.set_coils(1000,[0])
             atf_controller.atf_start()
     elif address == 1001:
         if to_value:
-            print("Stopping...")
+            logger.debug("Modbus stop command fired")
             databank.set_coils(1001, [0])
             atf_controller.atf_stop()
 
@@ -57,7 +56,6 @@ def modbus_change(address, from_value, to_value):
 async def main():
     while isRunning: # Main program loop
         databank.set_discrete_inputs(2000,[1])
-        print("Main_Loop")
         await poll_Modbus()
         await check_pressures()
         await atf_controller.controllerloop()
@@ -104,6 +102,5 @@ if __name__ == '__main__':
     init_Modbus()
     server.start()
     asyncio.run(main())
-
-
+    server.stop()
 

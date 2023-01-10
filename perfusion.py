@@ -40,6 +40,15 @@ eflux_pump.syringe.units = 'uL/min'  # set units to ul/min
 REACTION_VOLUME = 10  # ml
 
 
+def _calculateCS(rate, density):
+    # Multiply the cell specific rate by the number of cells
+    # rate in nl/cell/day
+    # density in cells/ml - volume fixed at 10
+    total_cells = density * REACTION_VOLUME
+    rate_ul_min = ((total_cells * rate) / 1440) / 1000  # 1440 minutes in a day
+    return round(rate_ul_min, 3)
+
+
 class Perfusion:
 
     def __init__(self, atfVol, atfRate, csRate, csDensity):
@@ -48,7 +57,7 @@ class Perfusion:
         self.csRate = csRate
         self.csDensity = csDensity
 
-        eflux_pump.rate = self._calculateCS(csRate, csDensity)
+        eflux_pump.rate = _calculateCS(csRate, csDensity)
 
         self._pump = ChemyxController()
         self._pump.openConnection()
@@ -67,13 +76,15 @@ class Perfusion:
         _time_required = atf_pump.volume / atf_pump.rate
         _cs_volume_required = eflux_pump.rate * _time_required
         eflux_pump.volume = _cs_volume_required
-        logger.info(f'CS Volume required is {_cs_volume_required}')
         self._pump.changePump(2)
         self._pump.setUnits(eflux_pump.syringe.units)
         self._pump.setDiameter(eflux_pump.syringe.diameter)
         self._pump.setVolume(eflux_pump.volume)
         self._pump.setRate(-eflux_pump.rate)  # Negative because it always withdraws
         self._pump.setDelay(eflux_pump.delay)
+        logger.info("Changed pump configurations: Units, Diameter, Volume, Rate, Delay")
+        logger.info("Pump 1: {}, {}, {}, {}, {}".format(atf_pump.syringe.units, atf_pump.syringe.diameter, atf_pump.volume, atf_pump.rate, atf_pump.delay))
+        logger.info("Pump 2: {}, {}, {}, {}, {}".format(eflux_pump.syringe.units, eflux_pump.syringe.diameter, eflux_pump.volume, eflux_pump.rate, eflux_pump.delay))
         self.settingsChanged = False
 
 
@@ -101,13 +112,10 @@ class Perfusion:
         if self.settingsChanged:
             self.configurePumps()
         logger.info('Pump withdraw command executed')
-        # Set pump 1
         self._pump.changePump(1)
         self._pump.setRate(-atf_pump.rate)
-        # Set pump 2
         self._pump.startPump(mode=0)
         await self.await_finish()
-        self._pump.changePump(1)
         logger.info(f'Cycle has withdrawn product: {self._pump.getDisplacedVolume()}')
         self.isBusy = False
 
@@ -116,6 +124,7 @@ class Perfusion:
         if self.settingsChanged:
             self.configurePumps()
         logger.info('Pump infuse command executed')
+        self._pump.changePump(1)
         self._pump.setRate(atf_pump.rate)
         self._pump.startPump(mode=1)
         await self.await_finish()
@@ -136,6 +145,7 @@ class Perfusion:
         while self.getPumpState() != '0':
             await asyncio.sleep(1)  # Ensures both pumps remain sychronised
         self._pump.stopPump()
+        await asyncio.sleep(0.5)
 
     async def doCommand(self, command):
         if not self.isBusy:
@@ -152,7 +162,7 @@ class Perfusion:
     async def setATF(self, atf_volume, atf_rate, cs_rate, cs_density):
         atf_pump.rate = atf_rate
         atf_pump.volume = atf_volume
-        eflux_pump.rate = self._calculateCS(cs_rate, cs_density)
+        eflux_pump.rate = _calculateCS(cs_rate, cs_density)
         _timerequired = atf_pump.volume / atf_pump.rate
         _volumerequired = eflux_pump.rate * _timerequired
         eflux_pump.volume = round(_volumerequired, 3)
@@ -161,31 +171,28 @@ class Perfusion:
 
     def setEfluxRate(self, csrate):
         if not csrate == self.csRate:
+            logger.info("Eflux Rate change requested: {}".format(csrate))
             self.csRate = csrate
-            eflux_pump.rate = self._calculateCS(self.csRate, self.csDensity)
+            eflux_pump.rate = _calculateCS(self.csRate, self.csDensity)
             self.settingsChanged = True
 
     def setEfluxDensity(self, csdensity):
         if not csdensity == self.csDensity:
+            logger.info("Eflux Density change requested: {}".format(csdensity))
             self.csDensity = csdensity
-            eflux_pump.rate = self._calculateCS(self.csRate, self.csDensity)
+            eflux_pump.rate = _calculateCS(self.csRate, self.csDensity)
             self.settingsChanged = True
 
 
     def setAtfRate(self,atfrate):
         if not atfrate == atf_pump.rate:
+            logger.info("ATF Rate change requested: {}".format(atfrate))
             atf_pump.rate = atfrate
             self.settingsChanged = True
 
     def setAtfVolume(self, atfvolume):
         if not atfvolume == atf_pump.volume:
+            logger.info("ATF Volume change requested: {}".format(atfvolume))
             atf_pump.volume = atfvolume
             self.settingsChanged = True
 
-    def _calculateCS(self, rate, density):
-        # Multiply the cell specific rate by the number of cells
-        # rate in nl/cell/day
-        # density in cells/ml - volume fixed at 10
-        total_cells = density * REACTION_VOLUME
-        rate_ul_min = ((total_cells * rate) / 1440) / 1000  # 1440 minutes in a day
-        return round(rate_ul_min, 3)

@@ -38,10 +38,11 @@ class AtfController:
                 self._state = States.STOPPING
                 self._stateChanged = True
 
-            print("State is {}".format(self._state))
-            print("State changed is {}".format(self._stateChanged))
+            # print("State is {}".format(self._state))
+            # print("State changed is {}".format(self._stateChanged))
             event_loop = asyncio.get_event_loop()
             if self._stateChanged:
+                logger.debug("State has changed to {}".format(self._state))
                 if self._state == States.READY:
                     self._stateChanged = False
                 elif self._state == States.PRIMING:
@@ -54,9 +55,8 @@ class AtfController:
                     infuse_task = asyncio.create_task(self._infuse())
                     asyncio.ensure_future(infuse_task, loop=event_loop)
                 elif self._state == States.STOPPING:
-                    print("Doing a stop")
-                    await self._atf_stop()
-                    self._state = States.READY
+                    stop_task = asyncio.create_task(self._atf_stop())
+                    asyncio.ensure_future(stop_task, loop=event_loop)
                 elif self._state == States.ERROR:
                     pass
             await asyncio.sleep(0.2)
@@ -64,7 +64,7 @@ class AtfController:
     # State transitions
     async def _prime(self):
         if not self._perfusion.isBusy:
-            print('In prime transition')
+            logger.info("Transitioning to Prime")
             self._stateChanged = False
             await self._perfusion.doCommand(PerfusionCommand.PRIME)
             self._state = States.RUN_WITHDRAW
@@ -72,7 +72,7 @@ class AtfController:
 
     async def _withdraw(self):
         if not self._perfusion.isBusy:
-            print('In withdraw transition')
+            logger.info("Transitioning to Withdraw")
             self._stateChanged = False
             await self._perfusion.doCommand(PerfusionCommand.WITHDRAW)
             self._state = States.RUN_INFUSE
@@ -80,7 +80,7 @@ class AtfController:
 
     async def _infuse(self):
         if not self._perfusion.isBusy:
-            print('In infuse transition')
+            logger.info("Transitioning to Infuse")
             self._stateChanged = False
             await self._perfusion.doCommand(PerfusionCommand.INFUSE)
             self._state = States.RUN_WITHDRAW
@@ -88,7 +88,7 @@ class AtfController:
 
     async def _atf_stop(self):
         if not self._perfusion.isBusy:
-            print('In stop transition')
+            logger.info("Transitioning to Stop")
             self.stateChanged = False
             await self._perfusion.doCommand(PerfusionCommand.EMPTY)
             await asyncio.sleep(1)  # Do the transition
@@ -100,11 +100,13 @@ class AtfController:
         if self._state == States.READY:
             self._stateChanged = True
             self._state = States.PRIMING
-            print("atf_start")
+            logger.info("Start command received")
+            # print("atf_start")
 
     def atf_stop(self):
         self._stopRequest = True
-        print("atf_Stop")
+        logger.info("Stop command received")
+        # print("atf_Stop")
 
     def atf_state(self):
         return self._state
